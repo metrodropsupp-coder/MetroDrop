@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="ru">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Админ-панель | MetroDrop</title>
+	<link rel="stylesheet" href="style.css">
+	<script src="supabase.js"></script>
+	<style>
+		html { scroll-behavior: smooth; }
+
+		.admin-body {
+			background: #0b1118;
+			color: #e6ecee;
+		}
+
+		.admin-shell {
+			position: relative;
+			z-index: 1;
+			width: min(1180px, calc(100% - 32px));
+			margin: 0 auto;
+			padding: 34px 0 56px;
+		}
+
+		.admin-topbar,
+		.admin-panel,
+		.admin-stat {
+			border: 1px solid rgba(149, 161, 169, .3);
+			background: rgba(12, 20, 26, .88);
+			box-shadow: 0 14px 32px rgba(0, 0, 0, .28);
+		}
+
+		.admin-topbar {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 20px;
+			padding: 18px 22px;
+			margin-bottom: 22px;
+		}
+
+		.admin-kicker {
+			margin: 0 0 6px;
+			color: #e6bd68;
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 2px;
+		}
+
+		.admin-title {
+			margin: 0;
+			font-size: clamp(24px, 4vw, 36px);
+			letter-spacing: 1px;
+		}
+
+		.admin-back {
+			color: #f0c979;
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 1px;
+			text-decoration: none;
+		}
+
+		.admin-nav {
+			display: flex;
+			gap: 8px;
+			margin: -8px 0 22px;
+		}
+
+		.admin-nav button {
+			padding: 10px 15px;
+			border: 1px solid rgba(149, 161, 169, .32);
+			border-radius: 3px;
+			background: rgba(28, 39, 45, .7);
+			color: #d8e0e2;
+			font-size: 11px;
+			font-weight: 800;
+			letter-spacing: 1px;
+			font-family: inherit;
+			text-decoration: none;
+			cursor: pointer;
+			transition: border-color .18s ease, color .18s ease, background .18s ease;
+		}
+
+		.admin-nav button:hover,
+		.admin-nav button:focus-visible,
+		.admin-nav button.is-active {
+			border-color: rgba(240, 201, 121, .75);
+			background: rgba(216, 173, 88, .16);
+			color: #f0c979;
+		}
+
+		.admin-stats {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 14px;
+			margin-bottom: 22px;
+		}
+
+		.admin-stat {
+			padding: 18px;
+		}
+
+		.admin-stat-label {
+			color: #95a1a9;
+			font-size: 11px;
+			letter-spacing: 1px;
+		}
+
+		.admin-stat-value {
+			display: block;
+			margin-top: 8px;
+			color: #f0c979;
+			font-size: 28px;
+		}
+
+		.admin-grid {
+			display: grid;
+			grid-template-columns: minmax(240px, .7fr) minmax(0, 1.3fr);
+			gap: 22px;
+		}
+
+		.admin-panel {
+			padding: 22px;
+		}
+
+		.admin-panel-wide {
+			grid-column: 1 / -1;
+		}
+
+		.admin-panel h2 {
+			margin: 0 0 18px;
+			font-size: 18px;
+			letter-spacing: 1px;
+		}
+
+		.admin-form {
+			display: grid;
+			gap: 12px;
+		}
+
+		.admin-form label {
+			display: grid;
+			gap: 6px;
+			color: #aeb9bd;
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 1px;
+		}
+
+		.admin-form input,
+		.admin-form textarea,
+		.admin-form select {
+			width: 100%;
+			padding: 11px 12px;
+			border: 1px solid rgba(149, 161, 169, .38);
+			border-radius: 3px;
+			background: #101a21;
+			color: #e6ecee;
+			font: inherit;
+		}
+
+		.admin-form textarea {
+			min-height: 82px;
+			resize: vertical;
+		}
+
+		.admin-button {
+			padding: 12px 16px;
+			border: 1px solid rgba(243, 195, 93, .82);
+			border-radius: 3px;
+			background: linear-gradient(180deg, #dcae52, #9b6827);
+			color: #17130d;
+			font-weight: 800;
+			letter-spacing: 1px;
+			cursor: pointer;
+		}
+
+		.admin-list {
+			display: grid;
+			gap: 10px;
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		.admin-list-item {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			padding: 12px;
+			border: 1px solid rgba(149, 161, 169, .2);
+			background: rgba(28, 39, 45, .6);
+		}
+
+		.admin-list-item strong {
+			display: block;
+			margin-bottom: 4px;
+		}
+
+		.admin-list-item small {
+			color: #95a1a9;
+		}
+
+		.admin-delete {
+			border: 0;
+			background: transparent;
+			color: #e58b6d;
+			cursor: pointer;
+		}
+
+		.admin-empty {
+			margin: 0;
+			color: #95a1a9;
+			font-size: 13px;
+		}
+
+		.admin-content-builder {
+			display: grid;
+			gap: 10px;
+		}
+
+		.case-edit-tabs {
+			display: flex;
+			gap: 8px;
+			margin-bottom: 14px;
+		}
+
+		.case-edit-tabs button {
+			padding: 9px 12px;
+			border: 1px solid rgba(149, 161, 169, .28);
+			border-radius: 3px;
+			background: rgba(28, 39, 45, .7);
+			color: #aeb9bd;
+			font-size: 10px;
+			font-weight: 800;
+			letter-spacing: .8px;
+			cursor: pointer;
+		}
+
+		.case-edit-tabs button.is-active {
+			border-color: rgba(240, 201, 121, .75);
+			background: rgba(216, 173, 88, .16);
+			color: #f0c979;
+		}
+
+		.case-edit-section {
+			display: grid;
+			gap: 12px;
+		}
+
+		.case-edit-section[hidden],
+		.case-edit-tabs[hidden] {
+			display: none !important;
+		}
+
+		.admin-content-row {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 8px;
+			padding: 10px;
+			border: 1px solid rgba(149, 161, 169, .2);
+			background: rgba(28, 39, 45, .5);
+		}
+
+		.admin-content-row input,
+		.admin-content-row select {
+			min-width: 0;
+		}
+
+		.admin-content-row {
+			grid-template-columns: minmax(0, 1fr) 112px;
+		}
+
+		.admin-content-data {
+			display: grid;
+			gap: 8px;
+		}
+
+		.admin-content-media {
+			display: grid;
+			gap: 5px;
+			justify-items: center;
+		}
+
+		.admin-content-preview {
+			width: 78px;
+			height: 78px;
+			border: 1px solid rgba(149, 161, 169, .24);
+			background: rgba(7, 12, 17, .72);
+			object-fit: contain;
+		}
+
+		.admin-content-row .admin-delete {
+			grid-column: 1 / -1;
+			justify-self: start;
+		}
+
+		@media (max-width: 720px) {
+			.admin-shell { width: min(100% - 20px, 560px); padding-top: 20px; }
+			.admin-topbar { align-items: flex-start; flex-direction: column; }
+			.admin-stats,
+			.admin-grid { grid-template-columns: 1fr; }
+			.admin-panel-wide { grid-column: auto; }
+		}
+	</style>
+</head>
+<body class="admin-body">
+	<div class="admin-shell">
+		<header class="admin-topbar">
+			<div>
+				<p class="admin-kicker">METRODROP / CONTROL ROOM</p>
+				<h1 class="admin-title">АДМИН-ПАНЕЛЬ</h1>
+			</div>
+			<a class="admin-back" href="home.html">НА ГЛАВНУЮ</a>
+		</header>
+		<nav class="admin-nav" aria-label="Разделы админ-панели">
+			<button type="button" data-admin-view="sections">РАЗДЕЛЫ</button>
+			<button type="button" data-admin-view="cases">КЕЙСЫ</button>
+		</nav>
+
+		<section class="admin-stats" aria-label="Статистика">
+			<div class="admin-stat"><span class="admin-stat-label">РАЗДЕЛЫ</span><strong class="admin-stat-value" data-stat="sections">0</strong></div>
+			<div class="admin-stat"><span class="admin-stat-label">КЕЙСЫ</span><strong class="admin-stat-value" data-stat="cases">0</strong></div>
+			<div class="admin-stat"><span class="admin-stat-label">ХРАНЕНИЕ</span><strong class="admin-stat-value">SUPABASE</strong></div>
+		</section>
+
+		<div class="admin-grid">
+			<section class="admin-panel admin-section-view" id="sectionCreatePanel">
+				<h2>НОВЫЙ РАЗДЕЛ</h2>
+				<form class="admin-form" id="sectionForm">
+					<label>НАЗВАНИЕ<input name="name" required placeholder="Например: ОСНОВНЫЕ КЕЙСЫ"></label>
+					<label>ОПИСАНИЕ<textarea name="description" placeholder="Короткое описание раздела"></textarea></label>
+					<button class="admin-button" type="submit">СОЗДАТЬ РАЗДЕЛ</button>
+				</form>
+			</section>
+
+			<section class="admin-panel admin-case-view" id="caseCreatePanel">
+				<h2>НОВЫЙ КЕЙС</h2>
+				<div class="case-edit-tabs" id="caseEditTabs" hidden>
+					<button type="button" data-edit-tab="info">ИНФОРМАЦИЯ КЕЙСА</button>
+					<button type="button" data-edit-tab="contents">СОДЕРЖИМОЕ КЕЙСА</button>
+				</div>
+				<form class="admin-form" id="caseForm">
+					<div class="case-edit-section" id="caseInfoFields">
+						<label>НАЗВАНИЕ<input name="name" required placeholder="Например: НОЧНОЙ РЕЙД"></label>
+						<label>РАЗДЕЛ<select name="sectionId" id="caseSection" required><option value="">Сначала создайте раздел</option></select></label>
+						<label>ИКОНКА КЕЙСА<input name="imageFile" type="file" accept="image/*"></label>
+						<label>ЦЕНА<input name="price" type="number" min="0" step="1" required placeholder="100"></label>
+						<label>ОПИСАНИЕ<textarea name="description" placeholder="Описание кейса"></textarea></label>
+					</div>
+					<div class="case-edit-section" id="caseContentsPanel">
+						<label>СОДЕРЖИМОЕ КЕЙСА</label>
+						<div class="admin-content-builder" id="caseContents"></div>
+						<button class="admin-button" id="addContentItem" type="button">+ ДОБАВИТЬ ПРЕДМЕТ</button>
+					</div>
+					<button class="admin-button" id="caseSubmitButton" type="submit">СОЗДАТЬ КЕЙС</button>
+					<button class="admin-button" id="cancelCaseEdit" type="button" hidden>ОТМЕНА РЕДАКТИРОВАНИЯ</button>
+				</form>
+			</section>
+
+			<section class="admin-panel admin-section-view" id="sectionsPanel">
+				<h2>РАЗДЕЛЫ КЕЙСОВ</h2>
+				<ul class="admin-list" id="sectionsList"></ul>
+				<p class="admin-empty" id="sectionsEmpty">Разделов пока нет.</p>
+			</section>
+
+			<section class="admin-panel admin-case-view" id="casesPanel">
+				<h2>КЕЙСЫ</h2>
+				<ul class="admin-list" id="casesList"></ul>
+				<p class="admin-empty" id="casesEmpty">Кейсов пока нет.</p>
+			</section>
+		</div>
+	</div>
+
+	<script>
+		let remoteState = { sections: [], cases: [] };
+		const sectionsList = document.querySelector("#sectionsList");
+		const casesList = document.querySelector("#casesList");
+		const sectionSelect = document.querySelector("#caseSection");
+		const caseForm = document.querySelector("#caseForm");
+		const caseSubmitButton = document.querySelector("#caseSubmitButton");
+		const cancelCaseEdit = document.querySelector("#cancelCaseEdit");
+		const caseEditTabs = document.querySelector("#caseEditTabs");
+		const addContentButton = document.querySelector("#addContentItem");
+		const caseInfoFields = document.querySelector("#caseInfoFields");
+		const caseContentsPanel = document.querySelector("#caseContentsPanel");
+		let editingCaseId = null;
+		let activeEditTab = "info";
+		const adminViewButtons = [...document.querySelectorAll("[data-admin-view]")];
+		const adminViewPanels = {
+			sections: [...document.querySelectorAll(".admin-section-view")],
+			cases: [...document.querySelectorAll(".admin-case-view")]
+		};
+
+		const setAdminView = (view) => {
+			Object.entries(adminViewPanels).forEach(([name, panels]) => {
+				panels.forEach((panel) => { panel.hidden = name !== view; });
+			});
+			adminViewButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.adminView === view));
+		};
+
+		adminViewButtons.forEach((button) => button.addEventListener("click", () => setAdminView(button.dataset.adminView)));
+		setAdminView(null);
+		const editableCaseFields = ["name", "sectionId", "imageFile", "price", "description"];
+
+		const setCaseEditMode = (isEditing) => {
+			editableCaseFields.forEach((fieldName) => {
+				caseForm.elements[fieldName].disabled = isEditing && activeEditTab !== "info";
+			});
+			contentBuilder.querySelectorAll("input, select, button").forEach((field) => {
+				field.disabled = isEditing && activeEditTab !== "contents";
+			});
+			addContentButton.disabled = isEditing && activeEditTab !== "contents";
+			caseInfoFields.hidden = isEditing && activeEditTab !== "info";
+			caseContentsPanel.hidden = isEditing && activeEditTab !== "contents";
+			caseSubmitButton.textContent = isEditing ? (activeEditTab === "contents" ? "СОХРАНИТЬ СОДЕРЖИМОЕ" : "СОХРАНИТЬ ИНФОРМАЦИЮ") : "СОЗДАТЬ КЕЙС";
+			caseEditTabs.hidden = !isEditing;
+			cancelCaseEdit.hidden = !isEditing;
+		};
+
+		const setEditTab = (tab) => {
+			activeEditTab = tab;
+			caseEditTabs.querySelectorAll("[data-edit-tab]").forEach((button) => button.classList.toggle("is-active", button.dataset.editTab === tab));
+			setCaseEditMode(true);
+		};
+
+		caseEditTabs.querySelectorAll("[data-edit-tab]").forEach((button) => button.addEventListener("click", () => setEditTab(button.dataset.editTab)));
+
+		const render = () => {
+			const sections = remoteState.sections;
+			const cases = remoteState.cases;
+			sectionsList.replaceChildren();
+			casesList.replaceChildren();
+			sections.forEach((section) => {
+				const item = document.createElement("li");
+				item.className = "admin-list-item";
+				item.innerHTML = `<div><strong>${section.name}</strong><small>${section.description || "Без описания"}</small></div><button class="admin-delete" type="button" data-delete-section="${section.id}">УДАЛИТЬ</button>`;
+				sectionsList.append(item);
+			});
+			cases.forEach((item) => {
+				const section = sections.find((entry) => entry.id === item.sectionId);
+				const row = document.createElement("li");
+				row.className = "admin-list-item";
+				row.innerHTML = `<div><strong>${item.name}</strong><small>${section?.name || "Без раздела"} · ${item.price || 0} · ${(item.contents || []).length} предметов</small></div><div><button class="admin-delete" type="button" data-edit-case="${item.id}">ИЗМЕНИТЬ</button><button class="admin-delete" type="button" data-delete-case="${item.id}">УДАЛИТЬ</button></div>`;
+				casesList.append(row);
+			});
+			sectionSelect.replaceChildren(new Option(sections.length ? "Выберите раздел" : "Сначала создайте раздел", ""));
+			sections.forEach((section) => sectionSelect.add(new Option(section.name, section.id)));
+			document.querySelector('[data-stat="sections"]').textContent = sections.length;
+			document.querySelector('[data-stat="cases"]').textContent = cases.length;
+			document.querySelector("#sectionsEmpty").hidden = sections.length > 0;
+			document.querySelector("#casesEmpty").hidden = cases.length > 0;
+		};
+
+		const refreshFromSupabase = async () => {
+			try {
+				remoteState = await window.metroDropSupabase.load();
+				remoteState.cases = remoteState.cases.map((item) => ({ ...item, sectionId: item.section_id ?? item.sectionId }));
+				render();
+			} catch (error) {
+				remoteState = { sections: [], cases: [] };
+				render();
+				console.error("Supabase unavailable", error);
+			}
+		};
+
+		document.querySelector("#sectionForm").addEventListener("submit", async (event) => {
+			event.preventDefault();
+			const form = event.currentTarget;
+			const data = new FormData(form);
+			const section = { id: crypto.randomUUID(), name: data.get("name").trim(), description: data.get("description").trim() };
+			try {
+				const [created] = await window.metroDropSupabase.createSection(section);
+				remoteState.sections.push(created || section);
+				form.reset();
+				render();
+			} catch (error) {
+				console.error("Supabase section creation failed", error);
+			}
+		});
+
+		const readImageFile = (file) => new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.addEventListener("load", () => resolve(reader.result));
+			reader.addEventListener("error", reject);
+			reader.readAsDataURL(file);
+		});
+
+		const contentBuilder = document.querySelector("#caseContents");
+		const addContentItem = (initial = {}) => {
+			const row = document.createElement("div");
+			row.className = "admin-content-row";
+			row.dataset.image = initial.image || "";
+			row.innerHTML = `
+				<div class="admin-content-data">
+					<input name="contentName" type="text" required placeholder="Название предмета" value="${initial.name || ""}">
+					<input name="contentPrice" type="number" min="0" step="1" required placeholder="Цена" value="${Number(initial.price) || 0}">
+					<select name="contentRarity" aria-label="Редкость предмета">
+						<option value="common" ${initial.rarity === "common" ? "selected" : ""}>СЕРЫЙ</option>
+						<option value="rare" ${initial.rarity === "rare" ? "selected" : ""}>ЗЕЛЁНЫЙ</option>
+						<option value="epic" ${initial.rarity === "epic" ? "selected" : ""}>ФИОЛЕТОВЫЙ</option>
+						<option value="blue" ${initial.rarity === "blue" ? "selected" : ""}>СИНИЙ</option>
+						<option value="pink" ${initial.rarity === "pink" ? "selected" : ""}>РОЗОВЫЙ</option>
+						<option value="red" ${initial.rarity === "red" ? "selected" : ""}>КРАСНЫЙ</option>
+						<option value="gold" ${initial.rarity === "gold" ? "selected" : ""}>ЗОЛОТОЙ</option>
+					</select>
+				</div>
+				<div class="admin-content-media">
+					<img class="admin-content-preview" src="${initial.image || "img/logo.png"}" alt="">
+					<input name="contentImage" type="file" accept="image/*">
+				</div>
+				<button class="admin-delete" type="button">УДАЛИТЬ</button>`;
+			row.querySelector(".admin-delete").addEventListener("click", () => row.remove());
+			row.querySelector('[name="contentImage"]').addEventListener("change", (event) => {
+				const file = event.currentTarget.files[0];
+				if (file) row.querySelector(".admin-content-preview").src = URL.createObjectURL(file);
+			});
+			contentBuilder.append(row);
+		};
+
+		document.querySelector("#addContentItem").addEventListener("click", addContentItem);
+
+		const readContentItems = async () => {
+			const rows = [...contentBuilder.querySelectorAll(".admin-content-row")];
+			return Promise.all(rows.map(async (row) => {
+				const imageFile = row.querySelector('[name="contentImage"]').files[0];
+				const image = imageFile ? await readImageFile(imageFile) : row.dataset.image;
+				if (!image) throw new Error("Для каждого предмета нужна иконка");
+				const rarity = row.querySelector('[name="contentRarity"]').value;
+				return {
+					name: row.querySelector('[name="contentName"]').value.trim(),
+					price: Number(row.querySelector('[name="contentPrice"]').value) || 0,
+					image,
+					rarity,
+					rarityLabel: { common: "СЕРЫЙ", rare: "ЗЕЛЁНЫЙ", epic: "ФИОЛЕТОВЫЙ", blue: "СИНИЙ", pink: "РОЗОВЫЙ", red: "КРАСНЫЙ", gold: "ЗОЛОТОЙ" }[rarity]
+				};
+			}));
+		};
+
+		caseForm.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			const form = event.currentTarget;
+			const data = new FormData(form);
+			const imageFile = data.get("imageFile");
+			if (imageFile && !imageFile.type.startsWith("image/")) return;
+			let contents;
+			try {
+				contents = await readContentItems();
+			} catch (error) {
+				console.error("Case contents are invalid", error);
+				return;
+			}
+			const existing = editingCaseId ? remoteState.cases.find((entry) => entry.id === editingCaseId) : null;
+			const image = imageFile ? await readImageFile(imageFile) : existing?.image;
+			if (!image) return;
+			const sectionId = editingCaseId ? (existing.sectionId || existing.section_id) : data.get("sectionId");
+			const item = { id: editingCaseId || crypto.randomUUID(), sectionId, name: editingCaseId ? existing.name : data.get("name").trim(), image: editingCaseId ? existing.image : image, price: editingCaseId ? Number(existing.price) || 0 : Number(data.get("price")) || 0, contents, description: editingCaseId ? (existing.description || "") : data.get("description").trim() };
+			try {
+				const payload = { section_id: item.sectionId, name: item.name, image: item.image, price: item.price, contents: item.contents, description: item.description };
+				if (editingCaseId) {
+					const [updated] = await window.metroDropSupabase.updateCase(editingCaseId, payload);
+					remoteState.cases = remoteState.cases.map((entry) => entry.id === editingCaseId ? { ...item, ...(updated || {}) } : entry);
+				} else {
+					const [created] = await window.metroDropSupabase.createCase({ id: item.id, ...payload });
+					remoteState.cases.push(created ? { ...item, id: created.id, sectionId: created.section_id } : item);
+				}
+				editingCaseId = null;
+				setCaseEditMode(false);
+				form.reset();
+				contentBuilder.replaceChildren();
+				render();
+			} catch (error) {
+				console.error("Supabase case creation failed", error);
+			}
+		});
+
+		document.addEventListener("click", (event) => {
+			const sectionButton = event.target.closest("[data-delete-section]");
+			const caseButton = event.target.closest("[data-delete-case]");
+			const editButton = event.target.closest("[data-edit-case]");
+			if (editButton) {
+				const item = remoteState.cases.find((entry) => entry.id === editButton.dataset.editCase);
+				if (!item) return;
+				editingCaseId = item.id;
+				activeEditTab = "info";
+				caseForm.elements.name.value = item.name;
+				caseForm.elements.sectionId.value = item.sectionId || item.section_id;
+				caseForm.elements.price.value = item.price || 0;
+				caseForm.elements.description.value = item.description || "";
+				contentBuilder.replaceChildren();
+				(item.contents || []).forEach((content) => addContentItem(typeof content === "string" ? { name: content, image: item.image } : content));
+				setCaseEditMode(true);
+				setEditTab("info");
+				caseForm.scrollIntoView({ behavior: "smooth", block: "start" });
+				return;
+			}
+			if (sectionButton) {
+				const id = sectionButton.dataset.deleteSection;
+				Promise.all([window.metroDropSupabase.deleteSection(id), window.metroDropSupabase.deleteCasesBySection(id)])
+					.catch((error) => console.error("Supabase section delete failed", error))
+					.finally(() => {
+						remoteState.sections = remoteState.sections.filter((item) => item.id !== id);
+						remoteState.cases = remoteState.cases.filter((item) => item.sectionId !== id && item.section_id !== id);
+						render();
+					});
+			}
+			if (caseButton) {
+				const id = caseButton.dataset.deleteCase;
+				window.metroDropSupabase.deleteCase(id)
+					.catch((error) => console.error("Supabase case delete failed", error))
+					.finally(() => {
+						remoteState.cases = remoteState.cases.filter((item) => item.id !== id);
+						render();
+					});
+			}
+		});
+
+		cancelCaseEdit.addEventListener("click", () => {
+			editingCaseId = null;
+			activeEditTab = "info";
+			setCaseEditMode(false);
+			caseForm.reset();
+			contentBuilder.replaceChildren();
+		});
+
+		render();
+		refreshFromSupabase();
+	</script>
+</body>
+</html>
